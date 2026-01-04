@@ -1,0 +1,352 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{subcaption} % For side-by-side tables
+\usepackage{siunitx}  % For decimal alignment
+\usepackage{hyperref}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{array}     % For better column control
+\usepackage{geometry}
+% Required packages (add to preamble)
+\usepackage{fancyhdr}  % For header/footer styling
+\usepackage{setspace}  % For line spacing
+\usepackage{makeidx}  
+\usepackage[nottoc]{tocbibind} % Adds References to TOC
+\usepackage[utf8]{inputenc}
+\usepackage{textgreek} % for Greek letters in text
+\makeindex                  % Initializes index
+\geometry{a4paper, margin=1in}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{appendix}
+
+
+
+
+% Page formatting
+\addtolength{\textwidth}{5mm}
+\addtolength{\textheight}{12mm}
+\addtolength{\topmargin}{-10mm}
+\pretolerance = 10000000
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{\baselineskip}
+\onehalfspacing   
+ 
+% Header / footer
+\pagestyle{fancy}
+\lhead{Manvendra Kumar Mishra, 2019011048}
+\chead{}
+\rhead{\em MATH5745M, CourseWork}
+\lfoot{}
+\cfoot{\thepage}
+\rfoot{}
+\setlength{\headheight}{20pt}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+\author{Manvendra Kumar Mishra}
+\date{\today}
+
+\lstdefinestyle{rstyle}{
+  language=R,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{blue},
+  stringstyle=\color{red},
+  commentstyle=\color{gray},
+  backgroundcolor=\color{gray!10},
+  numbers=left,
+  numberstyle=\tiny,
+  stepnumber=1,
+  numbersep=5pt,
+  breaklines=true,
+  frame=single,
+  captionpos=b,
+  showstringspaces=false
+  literate={&}{{\&}}1  % ← This line fixes the ampersand issue
+} 
+
+\begin{document}
+
+\begin{titlepage}
+
+    \centering
+    \vspace*{\fill} % Fills vertical space above
+    
+        \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.2\linewidth]{uni_logo.jpeg}
+        \label{fig:enter-label}
+    \end{figure}
+
+    {\LARGE\bfseries CourseWork MATH5745M: Multivariate Methods\par}
+    \vspace{0.5cm}
+    {\large Dimension Reduction and Pattern Discovery in Global Development Data\par}
+    
+    \vspace{0.5cm}
+    {\large Manvendra Kumar Mishra\par}
+    
+    \vspace{0.5cm}
+    {\large \today\par}
+    
+    \vspace*{\fill} % Fills vertical space below
+\end{titlepage}
+
+\clearpage
+\tableofcontents
+\clearpage
+
+% ------------Executive Summary Section -----------------
+
+\section{Executive Summary}
+
+This report helps use investigating the global development indicators with the use of multivariate analysis applied to the datasets downloaded from Gapmider Foundation’s website. The primary objective of this report is to explore the dependencies between socioeconomic, health and environmental variables present across the datasets, identify patterns across countries mentioned in the data and reduce the dimensionality of the final merged dataset after pre-processing for better interpretation of the case.\cite{gapminder}
+
+The analysis has different phases and starts from retrieving the data from Gapminder’s website for the mentioned use cases. Then cleaning it up and combining all the retrieved datasets, performing standardization on country names, GNI values, handling missing and zero values in the data by imputing them through various statistical approaches. Once pre-processing is done then starting with Principal Component Analysis (PCA) for dimensionality reduction and to capture the main variance in the data, retaining eight components which explains more than 80$\%$ of the total variance in the dataset. 
+
+Once we get the PCA results, using that result to create clusters with $K$-means clustering algorithm and then grouping the countries among those clusters. Additionally, used the elbow method to get the optimal number of clusters for this use case, which then helped to reflect distinct patterns across geographic and income groupings. Also, dependency analysis showed strong relation between variables like GDP per capital growth, electricity used and $\mathrm{CO}_2$ emission.
+
+Summarizing, this report demonstrates how a multivariate analysis can be used to simplify global datasets and uncover meaningful structures while supporting the data-driven policy interpretation related to global development.
+
+
+% ------------Data Compilation and Preperation Section -----------------
+
+\section{Data Compilation and Preperation}
+
+The data compilation phase starts with retrieving data, cleaning it and integrating the data with multiple development indicators from Gapminder foundation. These datasets primarily covers healthcare, economics and environment related variables for different country across globe and present for series of years (time-series). Main objective of this section to align these indicators (present in all the different datasets) into a single dataset which can be analyzed while addressing the missing values, inconsistent country naming and formatting issues. 
+
+Below are the detailed explanation of each steps performed to process and clean the data -     
+
+\subsection{Data Acquisition}
+\begin{itemize}
+    \item Downloaded the data from \href{http://www.gapminder.org/data/}{Gapminder website}.\cite{gapminder}
+    \item Datasets were present in separate .csv files, while the structure of data was same number of years and their values (coverage of time period) in the columns were different for each datasource.
+    \item Datasets include fertility rate, $\mathrm{CO}_2$ emissions, GDP growth etc.
+\end{itemize}
+
+\subsection{Country Name Standardization \& Cleaning}
+\begin{itemize}
+    \item When looked into the country names, there were cases with same country had multiple names across the datasets also within a dataset as well. For example - US written as United States Of America, USA and US.
+    \item Created mapping of such names and used the mapping to update the names in the raw data with a standard name for each country.
+    \item Cleaned the null values with zero, to make sure it does not cause any issue while merging the datasets or pivoting it down.
+    \item Handled the numeric values like 1.3B, 2TR, and converted them into actual numerical values.
+    \item Kept the data only for the latest year with coverage (non null values) $\geq$ $80\%$.
+    \item After merging the data grouped all the country combination and summed up the values to remove the duplicity in the row values.
+    \item Added Geog and Income columns based on mapping from world bank classification.
+\end{itemize}
+
+\subsection{Reshaping \& Merging}
+\begin{itemize}
+    \item The raw datasets were present in a pivot up format (Country -> year1 -> year2 -> ....). Since we needed to join the datasets. Started with renaming the dataset with a proper name that can be used for values of each indicator and then pivot it down before merging it.
+    \item Since we only took value of one year column for each indicator, removed year column before merging the datasets.
+    \item Once the datasets are in pivot down format then merged all the datasets forming a single structure that can be used in further processing without concerned about handling multiple tables.
+\end{itemize}
+Below is the summary of the datasets before merging - 
+\begin{table}[h]
+\centering
+\label{tab:year_selection}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Indicator} & \textbf{Best Year} & \textbf{Last Year} & \textbf{Final} \\
+ & \textbf{(Coverage $\geq$80\%)} & \textbf{(in Raw Data)} & \textbf{Row Count} \\
+\midrule
+consumption\_emissions\_tonnes\_per\_person & 2018 & 2018 & 118 \\
+corruption\_perception\_index\_cpi & 2023 & 2023 & 177 \\
+domestic\_gov\_health\_exp\_per\_gdp & 2022 & 2023 & 191 \\
+dtp\_immunization\_coverage & 2023 & 2023 & 162 \\
+electricity\_use\_per\_person & 2014 & 2019 & 142 \\
+exports\_percent\_of\_gdp & 2023 & 2023 & 158 \\
+female\_labour\_unemployment & 2022 & 2023 & 119 \\
+fertility\_rate & 2023 & 2023 & 217 \\
+foreign\_investment\_inflows & 2023 & 2023 & 162 \\
+gdp\_per\_capital\_growth & 2023 & 2023 & 146 \\
+mobile\_cellular\_subscription & 2021 & 2022 & 208 \\
+neonatal\_mortality\_rate & 2023 & 2023 & 196 \\
+total\_gni\_per\_capital & 2023 & 2023 & 188 \\
+\bottomrule
+\end{tabular}
+\caption{Indicator Year Selection Summary}
+\end{table}
+
+\subsection{Final Structure}
+Final structure of the dataset after all the pre-processing and cleaning steps is in form of each row with their country-year pair along with indicators and their values. 
+
+\begin{itemize}
+    \item \textbf{Total row count after merging}: 218 countries
+\end{itemize}
+
+% ------------Dependency Analysis Section -----------------
+
+\section{Dependency Analysis: Correlation Among Indicators}
+
+In this section we will be aiming to uncover the relationship between indicators across countries. By analyzing the dependencies in these indicators, we will try to understand the different aspects of development if they are interconnected. Identify a strong correlation amongst the indicators can offer insights into global trends and inform policy decisions. Below are the steps performed to achieve this goal- 
+
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.9\linewidth]{init_corr_matrix.png}}
+    \caption{Correlation Plot Of Development Indicators}
+    \label{fig:enter-label}
+\end{figure}
+
+Based on the above correlation plot we can see that - 
+\begin{itemize}
+    \item CPI has strong positive correlation with "Domestic Government Health Expenditure", "Electricity Used Per Person", "DTP Immunization Coverage" \& "Mobile Cellular Subscription". Which means Countries with less corruption tends to have better infrastructure and healthcare spend and vaccine coverage. This confirms and supports the idea that better governance results in better development outcomes.
+    \item Electricity Use has strong correlation with $\mathrm{CO}_2$ emission, supports the idea that greater energy use has higher carbon emission.
+    \item Fertility Rate and Neonatal Mortality rate shows strong positive correlation, while strong negative correlation with CPI. This indicates that high fertility rate tends to occur in countries where neonatal mortality is higher and governance is very poor.  
+\end{itemize}
+
+This correlation among indicators shows indication of dimensionality reduction (PCA) by combining clusters of correlated indicators.
+
+
+% ------------PCA Dimensionality Reduction Section -----------------
+
+\section{Dimensionality Reduction Via PCA}
+
+PCA stands for Principal Component Analysis, is used to reduce the redundancy in the dataset by identifying the correlated factors and combine them. It is applied to condense the multidimensional indicators into small number of non-related indicators/factors while trying to preserve the actual variance in the data as much as possible.\cite{jolliffe2002pca}
+
+Blow are the result from the dimensionality reduction process - 
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.8\linewidth]{Scree_Plot_variance_PCA.png}}
+    \caption{Principal Component Analysis: Scree Plot}
+    \label{fig:enter-label}
+\end{figure} 
+
+\begin{table}[H]
+\centering
+
+\label{tab:pca_results}
+\begin{tabular}{l *{9}{S[table-format=1.4]}}
+\toprule
+ & \multicolumn{9}{c}{Principal Components} \\
+\cmidrule(lr){2-10}
+ & {PC1} & {PC2} & {PC3} & {PC4} & {PC5} & {PC6} & {PC7} & {PC8} & {PC9} \\
+\midrule
+Standard deviation & 1.7090 & 1.2570 & 1.2240 & 1.0334 & 1.0182 & 0.9801 & 0.9116 & 0.8893 & 0.8523 \\
+Proportion of Variance & 0.2250 & 0.1210 & 0.1150 & 0.0821 & 0.0797 & 0.0739 & 0.0639 & 0.0608 & 0.0559 \\
+Cumulative Proportion & 0.2250 & 0.3460 & 0.4610 & 0.5434 & 0.6232 & 0.6971 & 0.7610 & 0.8218 & 0.8777 \\
+\bottomrule
+\end{tabular}
+\caption{Principal Component Analysis Results (First 9 PCs)}
+\end{table}
+
+Based on the chart \& table above we can clearly see that PC1 explain almost 22\% of variance by itself and from PC1 - PC8 explains over 80\% of variance in the data. This confirms that we can reduce substantial portion of multidimensional structure without loosing much information.
+
+Also, based on the Scree plot, the elbow appears after PC2, which indicates diminishing returns for additional components, which means data has underlying low dimensional structure driven by few dominant factors.
+
+\begin{table}[htbp]
+    \centering
+    \begin{subtable}[t]{0.48\textwidth}
+        \centering
+        \caption{Top 5 Variables by PC1 Loadings}
+        \label{tab:pc1}
+        \begin{tabular}{@{}>{\raggedright\arraybackslash}p{5cm}rr@{}}
+            \toprule
+            Variable & PC1 & PC2 \\
+            \midrule
+            fertility\_rate & -0.400 & -0.379 \\
+            corruption\_perception\_index\_cpi & 0.398 & -0.298 \\
+            neonatal\_mortality\_rate & -0.397 & -0.401 \\
+            consumption\_emissions & 0.378 & -0.296 \\
+            exports\_percent\_of\_gdp & 0.310 & -0.177 \\
+            \bottomrule
+        \end{tabular}
+    \end{subtable}
+    \hfill
+    \begin{subtable}[t]{0.48\textwidth}
+        \centering
+        \caption{Top 5 Variables by PC2 Loadings}
+        \label{tab:pc2}
+        \begin{tabular}{@{}>{\raggedright\arraybackslash}p{5cm}rr@{}}
+            \toprule
+            Variable & PC1 & PC2 \\
+            \midrule
+            female\_labour\_unemployment & 0.044 & 0.415 \\
+            neonatal\_mortality\_rate & -0.397 & -0.401 \\
+            fertility\_rate & -0.400 & -0.379 \\
+            electricity\_use\_per\_person & 0.307 & -0.373 \\
+            dtp\_immunization\_coverage & 0.176 & 0.313 \\
+            \bottomrule
+        \end{tabular}
+    \end{subtable}
+    \caption{Principal Component Loadings}
+    \label{tab:pca_loadings}
+\end{table}
+
+Based on table 3, PC1 captures the division between developed and undeveloped countries. As, high scores are countries with good governance (CPI), $\mathrm{CO}_2$ emission (Industry activity) and export oriented countries. While low scorers exhibits high fertility and neonatal mortality rate.
+
+Whereas PC2 captures the division between countries with poor healthcare structure and gender inequality from countries with higher infrastructure and health coverage.
+
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.8\linewidth, height = 0.3\textheight]{PCA_Biplots.png}}
+    \caption{PCA Biplot (a) By Income; (b) By Region}
+    \label{fig:enter-label}
+\end{figure}
+
+Even while looking at the Biplot we can say that - 
+\begin{itemize}
+    
+    \item High income countries are clustered tightly, separating them from other categories and reflecting strong infrastructure, low mortality, better governance.
+    \item Low income countries shows wide range and variability, highlighting diverse challenges.
+    \item Geographic clustering indicates even after adjusting for the income supports the idea of persistent regional development paths.
+\end{itemize}
+
+% ------------Clustering Section -----------------
+
+\section{Clustering Methodology}
+
+Clustering techniques are used to identify similar hidden patterns in the data. In this context it will help us in identifying and group countries with similar socioeconomic factors irrespective of if they are in different geographic location or difference in politics.
+
+K-means clustering method is applied to the data to scale the indicators and uncover any natural groupings of countries based on socioeconomic and health-related variables\cite{macqueen1967kmeans}. To calculate the number of clusters we will use elbow method.
+
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.8\linewidth, height =0.3\textheight]{elbow_chart.png}}
+    \caption{Elbow Method for Optimal Clusters}
+    \label{fig:enter-label}
+\end{figure}
+
+Based on the elbow chart, the WSS (Within-Cluster Sum of Squares) decreases as the number of cluster increases, which is inline with expectation as higher number of clusters means that data points are tightly grouped. Also, it is visible that after 4-5 clusters the curve starts to flatten, which indicates diminishing returns, hence optimal number of clusters should ne 4 or 5.
+
+\begin{figure}[H]
+    \centering
+   \fbox{\includegraphics[width=0.7\linewidth,height = 0.27\textheight]{K-mean_clustering.png}}
+    \caption{K-means Clusters on PC1 and PC2}
+    \label{fig:enter-label}
+\end{figure}
+
+Based on the clustering visualization, number of clusters selected are 4 based on elbow method. First high dimensional data is reduced into two principal components (PC1 and PC2) and then data is clustered capturing the most variance in 2D space. We can clearly see the difference in grouping with minimal overlap which means algorithm successfully identifies the clusters. Some overlap can be seen in the center of the graph but overall separation indicates meaningful underlying differences in data.
+
+
+% ------------Conclusion Section -----------------
+\section{Conclusion}
+
+The report based on the analysis done on the Gapminder data clearly demonstrate the power of multivariate analysis in identifying the patterns and groups. Principal Component Analysis played a crucial role in reducing the dimensionality in the data. The analysis revealed that countries can also be grouped based on their socioeconomic and healthcare related factors and not just by geographical characteristics.
+
+The dimensionality reduction highlighted that key difference in countries according to the shared data is mostly driven by factors like \textbf{corruption perception index}, \textbf{fertility rate}, \textbf{mortality rate} and \textbf{energy use}. In general, both the principal components separated countries based on developed and undeveloped countries on all the mentioned factors. 
+
+Clustering using K-means created 4 different clusters -
+\begin{itemize}
+    \item \textbf{Cluster 1:} High income countries, with good governance and better healthcare and infrastructure facilities.
+    \item \textbf{Cluster 2:} Countries with high fertility and infant mortality rate indicating under-development and poor governance.
+    \item \textbf{Cluster 3 and 4} Transitional economic countries with mixed indicators.
+\end{itemize}
+In essence, the analysis gives us a fully data-driven analytical foundation to understand the global inequality through evidence based intervention.
+
+\clearpage
+\begin{appendices}
+\section{R Code: Data Processing and Clustering Pipeline}
+
+\lstinputlisting[style=rstyle,caption={Key R script for data preparation, PCA, and K-means clustering.},label={lst:rcode}]{analysis_pipeline.R}
+
+\end{appendices}
+
+\clearpage
+
+\bibliographystyle{plain}
+\bibliography{reference}
+
+\end{document}
